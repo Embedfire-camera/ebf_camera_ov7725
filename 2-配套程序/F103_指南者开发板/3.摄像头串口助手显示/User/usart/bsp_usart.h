@@ -15,7 +15,7 @@
 #define  DEBUG_USARTx                   USART1
 #define  DEBUG_USART_CLK                RCC_APB2Periph_USART1
 #define  DEBUG_USART_APBxClkCmd         RCC_APB2PeriphClockCmd
-#define  DEBUG_USART_BAUDRATE           115200
+#define  DEBUG_USART_BAUDRATE           1500000
 
 // USART GPIO Òý½Åºê¶¨Òå
 #define  DEBUG_USART_GPIO_CLK           (RCC_APB2Periph_GPIOA)
@@ -103,7 +103,12 @@
 //#define  DEBUG_USART_IRQ                UART5_IRQn
 //#define  DEBUG_USART_IRQHandler         UART5_IRQHandler
 
-
+void debug_send_data(uint8_t *data, uint32_t len);
 void USART_Config(void);
+
+uint8_t *get_rx_data(void);
+uint32_t get_rx_len(void);
+void reset_rx_data(void);
+uint8_t get_rx_flag(void);
 
 #endif /* __USART_H */

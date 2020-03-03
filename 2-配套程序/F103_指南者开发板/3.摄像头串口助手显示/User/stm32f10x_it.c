@@ -27,7 +27,8 @@
 #include "stm32f10x_it.h"
 
 #include "./ov7725/bsp_ov7725.h"
-#include "./systick/bsp_SysTick.h" 
+#include "./systick/bsp_SysTick.h"
+#include "./sdio/bsp_sdio_sdcard.h"	
 
 extern uint8_t Ov7725_vsync;
 
@@ -180,6 +181,21 @@ void OV7725_VSYNC_EXTI_INT_FUNCTION ( void )
         EXTI_ClearITPendingBit(OV7725_VSYNC_EXTI_LINE);		    //清除EXTI_Line0线路挂起标志位        
     }    
 }
+
+
+/*
+ * 函数名：SDIO_IRQHandler
+ * 描述  ：在SDIO_ITConfig(）这个函数开启了sdio中断	，
+ *		     数据传输结束时产生中断
+ * 输入  ：无		 
+ * 输出  ：无
+ */
+void SDIO_IRQHandler(void) 
+{
+  /* Process All SDIO Interrupt Sources */
+  SD_ProcessIRQSrc();
+}
+
 
 /******************************************************************************/
 /*                 STM32F10x Peripherals Interrupt Handlers                   */

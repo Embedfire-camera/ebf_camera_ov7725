@@ -254,6 +254,7 @@ typedef struct
 #define FIFO_WE_L()     OV7725_WE_GPIO_PORT->BRR  =OV7725_WE_GPIO_PIN
 
 
+/* LCD 用 */
 #define READ_FIFO_PIXEL(RGB565)   	do{\
 	                                  RGB565=0;\
 	                                  FIFO_RCLK_L();\
@@ -263,6 +264,17 @@ typedef struct
 	                                  RGB565 |= (OV7725_DATA_GPIO_PORT->IDR >>8) & 0x00ff;\
 	                                  FIFO_RCLK_H();\
                                     }while(0)
+
+/* 上位机用（上位机需要高位先发送，所以这里与LCD使用的不一样） */
+//#define READ_FIFO_PIXEL(RGB565)   	do{\
+//	                                  RGB565=0;\
+//	                                  FIFO_RCLK_L();\
+//	                                  RGB565 = (OV7725_DATA_GPIO_PORT->IDR >>8) & 0x00ff;\
+//	                                  FIFO_RCLK_H();\
+//                                    FIFO_RCLK_L();\
+//	                                  RGB565 |= (OV7725_DATA_GPIO_PORT->IDR) & 0xff00;\
+//	                                  FIFO_RCLK_H();\
+//                                    }while(0)
 
 #define FIFO_PREPARE                do{\
 	                                  FIFO_RRST_L();\
