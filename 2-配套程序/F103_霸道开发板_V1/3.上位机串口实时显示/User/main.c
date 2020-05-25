@@ -41,7 +41,8 @@ int main(void)
 	
 	float frame_count = 0;
 	uint8_t retry = 0;
-
+	  /* 注意 *//* 注意 *//* 注意 *//* 注意 *//* 注意 *//* 注意 *//* 注意 */
+	/*注意上位机波特率请设置为：1500000（没有这个波特率选项请手动修改）*/
 	USART_Config();
 	LED_GPIO_Config();
 	Key_GPIO_Config();
@@ -87,6 +88,8 @@ int main(void)
 	
 	while(1)
 	{
+	 /* 注意 *//* 注意 *//* 注意 *//* 注意 *//* 注意 *//* 注意 *//* 注意 */
+	/*注意上位机波特率请设置为：1500000（没有这个波特率选项请手动修改）*/
     /* 写图像数据到上位机 */
     write_rgb_wincc(0, cam_mode.cam_width, cam_mode.cam_height);
     LED2_TOGGLE;
