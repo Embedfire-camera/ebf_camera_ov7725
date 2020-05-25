@@ -352,7 +352,7 @@
             <NoWarn>0</NoWarn>
             <uSurpInc>0</uSurpInc>
             <useXO>0</useXO>
-            <ClangAsOpt>4</ClangAsOpt>
+            <ClangAsOpt>1</ClangAsOpt>
             <VariousControls>
               <MiscControls></MiscControls>
               <Define></Define>
@@ -564,11 +564,6 @@
               <FilePath>..\..\User\sccb\bsp_sccb.c</FilePath>
             </File>
             <File>
-              <FileName>bsp_ili9341_lcd.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\User\lcd\bsp_ili9341_lcd.c</FilePath>
-            </File>
-            <File>
               <FileName>fonts.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\User\font\fonts.c</FilePath>
@@ -592,6 +587,11 @@
               <FileName>bsp_SysTick.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\User\SysTick\bsp_SysTick.c</FilePath>
+            </File>
+            <File>
+              <FileName>wildfire_image_assistant.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\WIA\wildfire_image_assistant.c</FilePath>
             </File>
           </Files>
         </Group>
