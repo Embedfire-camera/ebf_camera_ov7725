@@ -25,13 +25,14 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
-
+#include "./led/bsp_led.h"   
 #include "./ov7725/bsp_ov7725.h"
 #include "./systick/bsp_SysTick.h"
 #include "./sdio/bsp_sdio_sdcard.h"	
+#include "./usart/bsp_usart.h"
+#include "./protocol/protocol.h"
 
 extern uint8_t Ov7725_vsync;
-
 
 extern unsigned int Task_Delay[];
 extern void TimingDelay_Decrement(void);
@@ -67,6 +68,7 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* Go to infinite loop when Hard Fault exception occurs */
+  LED1_ON;
   while (1)
   {
   }
@@ -205,13 +207,18 @@ void SDIO_IRQHandler(void)
 /******************************************************************************/
 
 /**
-  * @brief  This function handles PPP interrupt request.
-  * @param  None
-  * @retval None
+  * @brief  串口中断处理服务函数
+  * @param  无
+  * @retval 无
   */
-/*void PPP_IRQHandler(void)
+void DEBUG_USART_IRQHandler(void)
 {
-}*/
+	if(USART_GetITStatus(DEBUG_USARTx,USART_IT_RXNE)!=RESET)
+	{
+    uint8_t data = USART_ReceiveData(DEBUG_USARTx);
+    protocol_data_recv(&data, 1);
+	}
+}
 
 /**
   * @}

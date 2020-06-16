@@ -140,7 +140,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>CMSIS_AGDI</Key>
-          <Name>-X"Fire CMSIS-DAP" -UHS-00009458 -O206 -S9 -C0 -P00000000 -N00("ARM CoreSight SW-DP") -D00(1BA01477) -L00(0) -TO65554 -TC10000000 -TT10000000 -TP20 -TDS8007 -TDT0 -TDC1F -TIEFFFFFFFF -TIP8 -FO15 -FD20000000 -FC1000 -FN1 -FF0STM32F10x_512.FLM -FS08000000 -FL080000 -FP0($$Device:STM32F103VE$Flash\STM32F10x_512.FLM)</Name>
+          <Name>-X"Embedfire CMSIS-DAP" -U2020-02-27 -O206 -S9 -C0 -P00000000 -N00("ARM CoreSight SW-DP") -D00(1BA01477) -L00(0) -TO65554 -TC10000000 -TT10000000 -TP20 -TDS8007 -TDT0 -TDC1F -TIEFFFFFFFF -TIP8 -FO15 -FD20000000 -FC1000 -FN1 -FF0STM32F10x_512.FLM -FS08000000 -FL080000 -FP0($$Device:STM32F103VE$Flash\STM32F10x_512.FLM)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -153,57 +153,52 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>Ov7725_vsync</ItemText>
+          <ItemText>parser,0x10</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>Camera_Data</ItemText>
+          <ItemText>recv_buf,0x10</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>j,0x0A</ItemText>
+          <ItemText>frame[(head_oft + frame_len - 1) % PROT_FRAME_LEN_RECV]</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>cam_mode,0x0A</ItemText>
+          <ItemText>parser.r_oft,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
           <WinNumber>1</WinNumber>
-          <ItemText>bmpfdst,0x0A</ItemText>
+          <ItemText>reg_add</ItemText>
         </Ww>
         <Ww>
           <count>5</count>
           <WinNumber>1</WinNumber>
-          <ItemText>bmpfsrc,0x0A</ItemText>
+          <ItemText>reg_val</ItemText>
         </Ww>
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
-          <ItemText>packet_head</ItemText>
+          <ItemText>frame_data</ItemText>
         </Ww>
         <Ww>
           <count>7</count>
           <WinNumber>1</WinNumber>
-          <ItemText>crc</ItemText>
+          <ItemText>parser.frame_len,0x10</ItemText>
         </Ww>
         <Ww>
           <count>8</count>
           <WinNumber>1</WinNumber>
-          <ItemText>width</ItemText>
+          <ItemText>packet_head</ItemText>
         </Ww>
         <Ww>
           <count>9</count>
           <WinNumber>1</WinNumber>
-          <ItemText>data</ItemText>
-        </Ww>
-        <Ww>
-          <count>10</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>data_rx_buff</ItemText>
+          <ItemText>frame_data</ItemText>
         </Ww>
       </WatchWindow1>
       <MemoryWindow1>
@@ -220,7 +215,7 @@
       <DebugFlag>
         <trace>0</trace>
         <periodic>1</periodic>
-        <aLwin>1</aLwin>
+        <aLwin>0</aLwin>
         <aCover>0</aCover>
         <aSer1>0</aSer1>
         <aSer2>0</aSer2>
@@ -783,8 +778,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\User\bmp\bsp_bmp.c</PathWithFileName>
-      <FilenameWithoutPath>bsp_bmp.c</FilenameWithoutPath>
+      <PathWithFileName>..\..\User\WIA\wildfire_image_assistant.c</PathWithFileName>
+      <FilenameWithoutPath>wildfire_image_assistant.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -795,64 +790,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\User\WIA\wildfire_image_assistant.c</PathWithFileName>
-      <FilenameWithoutPath>wildfire_image_assistant.c</FilenameWithoutPath>
-      <RteFlg>0</RteFlg>
-      <bShared>0</bShared>
-    </File>
-  </Group>
-
-  <Group>
-    <GroupName>Fatfs</GroupName>
-    <tvExp>1</tvExp>
-    <tvExpOptDlg>0</tvExpOptDlg>
-    <cbSel>0</cbSel>
-    <RteFlg>0</RteFlg>
-    <File>
-      <GroupNumber>5</GroupNumber>
-      <FileNumber>43</FileNumber>
-      <FileType>1</FileType>
-      <tvExp>0</tvExp>
-      <tvExpOptDlg>0</tvExpOptDlg>
-      <bDave2>0</bDave2>
-      <PathWithFileName>..\..\User\FATFS\diskio.c</PathWithFileName>
-      <FilenameWithoutPath>diskio.c</FilenameWithoutPath>
-      <RteFlg>0</RteFlg>
-      <bShared>0</bShared>
-    </File>
-    <File>
-      <GroupNumber>5</GroupNumber>
-      <FileNumber>44</FileNumber>
-      <FileType>1</FileType>
-      <tvExp>0</tvExp>
-      <tvExpOptDlg>0</tvExpOptDlg>
-      <bDave2>0</bDave2>
-      <PathWithFileName>..\..\User\FATFS\ff.c</PathWithFileName>
-      <FilenameWithoutPath>ff.c</FilenameWithoutPath>
-      <RteFlg>0</RteFlg>
-      <bShared>0</bShared>
-    </File>
-    <File>
-      <GroupNumber>5</GroupNumber>
-      <FileNumber>45</FileNumber>
-      <FileType>1</FileType>
-      <tvExp>0</tvExp>
-      <tvExpOptDlg>0</tvExpOptDlg>
-      <bDave2>0</bDave2>
-      <PathWithFileName>..\..\User\FATFS\option\ccsbcs.c</PathWithFileName>
-      <FilenameWithoutPath>ccsbcs.c</FilenameWithoutPath>
-      <RteFlg>0</RteFlg>
-      <bShared>0</bShared>
-    </File>
-    <File>
-      <GroupNumber>5</GroupNumber>
-      <FileNumber>46</FileNumber>
-      <FileType>1</FileType>
-      <tvExp>0</tvExp>
-      <tvExpOptDlg>0</tvExpOptDlg>
-      <bDave2>0</bDave2>
-      <PathWithFileName>..\..\User\FATFS\option\syscall.c</PathWithFileName>
-      <FilenameWithoutPath>syscall.c</FilenameWithoutPath>
+      <PathWithFileName>..\..\User\protocol\protocol.c</PathWithFileName>
+      <FilenameWithoutPath>protocol.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -865,8 +804,8 @@
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
     <File>
-      <GroupNumber>6</GroupNumber>
-      <FileNumber>47</FileNumber>
+      <GroupNumber>5</GroupNumber>
+      <FileNumber>43</FileNumber>
       <FileType>5</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>

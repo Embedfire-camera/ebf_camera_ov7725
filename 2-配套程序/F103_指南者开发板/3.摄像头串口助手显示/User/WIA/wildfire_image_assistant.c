@@ -17,18 +17,20 @@
 #include "./WIA/wildfire_image_assistant.h"
 #include "./ov7725/bsp_ov7725.h"
 #include "./led/bsp_led.h"
+#include "./protocol/protocol.h"
+#include "./sccb/bsp_sccb.h"
 
 extern uint8_t Ov7725_vsync;
 
 /**
- * @brief   计算包的 CRC-16.
- *          CRC的寄存器值由rcr_init给出，这样可以不一次计算所有数据的结果
- *          （这里一帧图像有150KB，内部不能一次放下这么大的数据，需要分段计算）
- * @param   *data:  要计算的数据的数组.
- * @param   length: 数据的大小
- * @return  status: 计算CRC.
+ * @brief  计算包的 CRC-16.
+ *         CRC的寄存器值由rcr_init给出，这样可以不一次计算所有数据的结果
+ *         （这里一帧图像有150KB，内部不能一次放下这么大的数据，需要分段计算）
+ * @param  *data:  要计算的数据的数组.
+ * @param  length: 数据的大小
+ * @return status: 计算CRC.
  */
-uint16_t calc_crc_16(uint8_t *data, uint16_t length, uint16_t rcr_init)
+static uint16_t calc_crc_16(uint8_t *data, uint16_t length, uint16_t rcr_init)
 {
   uint16_t crc = rcr_init;
   
@@ -53,44 +55,104 @@ uint16_t calc_crc_16(uint8_t *data, uint16_t length, uint16_t rcr_init)
 }
 
 /**
- * @brief  没有附加数据的应答.
- * @param  timeout: 超时时间.
- * @return -1：超时返回；非-1：收到应答，返回上位机应答的确认字.
+ * @brief  发送设置图像格式包给上位机.
+ * @param  type:   图像格式.
+ * @param  width:  图像宽度.
+ * @param  height: 图像高度.
+ * @return void.
  */
-int no_ack_with_data_attached(uint32_t timeout)
+void ack_read_wincc(uint16_t number, uint8_t val)
 {
-  uint8_t* data = NULL;
-  uint32_t packet_head = 0;
+  uint16_t crc_16 = 0xFFFF;
   
-  while(get_rx_flag() != 1 && timeout--)
-  {
-    
-  }
+  uint8_t packet_head[16] = {0x53, 0x5A, 0x48, 0x59,     // 包头
+                             0x00,                       // 设备地址
+                             0x10, 0x00, 0x00, 0x00,     // 包长度 (10+1+2+2+2)                
+                             0x11,                       // 设置图像格式指令
+                             };
   
-  if (timeout <= 0)
+  packet_head[10] = 0;         // 执行ok
+  
+  packet_head[11] = number & 0xFF;               // 寄存器对应上位机的序号
+  packet_head[12] = (number >> 8 ) & 0xFF;       // 寄存器对应上位机的序号
+                             
+  packet_head[13] = val;       // 寄存器值
+                             
+  crc_16 = calc_crc_16((uint8_t *)&packet_head, sizeof(packet_head) - 2, crc_16);    // 分段计算crc—16的校验码, 计算包头的
+  
+  packet_head[14] = (crc_16 >> 8) & 0x00FF;
+  packet_head[15] = crc_16 & 0x00FF;
+                             
+  CAM_ASS_SEND_DATA((uint8_t *)&packet_head, sizeof(packet_head));
+}
+
+/**
+ * @brief   读寄存器
+ * @param   addr：寄存器地址.
+ * @return  status: 0:应答，-1：非应答.
+ */
+void read_rge(uint16_t number, uint8_t addr)
+{
+  uint8_t buff[1] = {0};
+  
+  if (SCCB_ReadByte(buff, 1, addr) == 1)
   {
-    return -1;    /* 返回超时错误 */
+    ack_read_wincc(number, buff[0]);
   }
-  else
+}
+
+/**
+ * @brief   接收的数据处理
+ * @param   void
+ * @return  status: 0:应答，-1：非应答.
+ */
+int8_t receiving_process(void)
+{
+  uint8_t frame_data[128];         // 要能放下最长的帧
+  uint16_t frame_len = 0;          // 帧长度
+  uint8_t cmd_type = CMD_NONE;     // 命令类型
+  
+  while(1)
   {
-    /* 收到数据 */
-    data = get_rx_data();
-    
-    packet_head = *data << 24 | *(data+1) << 16 | *(data+2) << 8 | *(data+3);    // 合成包头
-    
-    if (packet_head == FRAME_HEADER)    // 校验包头是否正确
+    cmd_type = protocol_frame_parse(frame_data, &frame_len);
+    switch (cmd_type)
     {
-      uint32_t pack_len = *(data+5) << 24 | *(data+6) << 16 | *(data+7) << 8 | *(data+8);    // 合成长度
-      
-      if (calc_crc_16(data, pack_len-2, 0xFFFF) == (*(data+pack_len-1) | *(data+pack_len-2) << 8))    // 校验 CRC-16
+      case CMD_NONE:
       {
-        reset_rx_data();    // 重置数据接收
-        
-        return *(data + 10);    // 返回确认字
+        return -1;
       }
+      
+      /* 写寄存器 */
+      case CMD_WRITE_REG:
+      {
+//        uint8_t dev_add = frame_data[4];        // 设备地址
+        uint8_t reg_add = frame_data[10];    // 寄存器地址
+        uint8_t reg_val = frame_data[11];    // 寄存器值
+        
+        SCCB_WriteByte(reg_add, reg_val);
+        break;
+      }
+      
+      /* 读寄存器 */
+      case CMD_READ_REG:
+      {
+//        uint8_t dev_add = frame_data[4];   // 设备地址
+        uint16_t number = frame_data[10] | (frame_data[11] << 8);     // 序号
+        uint8_t reg_add = frame_data[12];    // 寄存器地址
+        
+        read_rge(number, reg_add);
+        break;
+      }
+      
+      /* 接收到应答信号 */
+      case CMD_ACK:
+      {
+        return 0;
+      }
+
+      default: 
+        return -1;
     }
-    
-    return -1;
   }
 }
 
@@ -105,9 +167,9 @@ void set_wincc_format(uint8_t addr, uint8_t type, uint16_t width, uint16_t heigh
 {
   uint16_t crc_16 = 0xFFFF;
   
-  uint8_t packet_head[17] = {0x59, 0x48, 0x5A, 0x53,     // 包头
+  uint8_t packet_head[17] = {0x53, 0x5A, 0x48, 0x59,     // 包头
                              0x00,                       // 设备地址
-                             0x00, 0x00, 0x00, 0x11,     // 包长度 (10+1+2+2+2)                
+                             0x11, 0x00, 0x00, 0x00,     // 包长度 (10+1+2+2+2)                
                              0x01,                       // 设置图像格式指令
                              };
   
@@ -115,18 +177,16 @@ void set_wincc_format(uint8_t addr, uint8_t type, uint16_t width, uint16_t heigh
   
   packet_head[10] = type;
                              
-  packet_head[11] = width >> 8;
-  packet_head[12] = width & 0xFF;
+  packet_head[11] = width & 0xFF;
+  packet_head[12] = width >> 8;
                              
-  packet_head[13] = height >> 8;
-  packet_head[14] = height & 0xFF;
+  packet_head[13] = height & 0xFF;
+  packet_head[14] = height >> 8;
                              
   crc_16 = calc_crc_16((uint8_t *)&packet_head, sizeof(packet_head) - 2, crc_16);    // 分段计算crc—16的校验码, 计算包头的
   
-  packet_head[15] = crc_16 & 0x00FF;
-  packet_head[16] = (crc_16 >> 8) & 0x00FF;
-                             
-//  printf("0x%x\r\n", packet_head[15]);
+  packet_head[15] = (crc_16 >> 8) & 0x00FF;
+  packet_head[16] = crc_16 & 0x00FF;
                              
   CAM_ASS_SEND_DATA((uint8_t *)&packet_head, sizeof(packet_head));
 }
@@ -145,56 +205,37 @@ int write_rgb_wincc(uint8_t addr, uint16_t width, uint16_t height)
 	uint16_t Camera_Data[640];
   static uint8_t flag = 1;
 
-//  packet_head_t packet_head =
-//  {
-//    .head = 0x59485A53,     // 包头
-//    .addr = 0x00,           // 设备地址
-//    .len  = 0x00000011,     // 包长度 (10+320*240*2+2)
-//    .cmd  = 02,             // 图像数据命令
-//  };
+  /* 发送图像包头*/
+  packet_head_t packet_head =
+  {
+    .head = FRAME_HEADER,   // 包头
+    .addr = 0x00,           // 设备地址
+    .len  = 0x00,           // 包长度
+    .cmd  = CMD_PIC_DATA,   // 发送图像数据包
+  };                        
   
   if (flag)    /* 设置一次上位机的图像格式 */
   {
-    
-    do
-    {
-      reset_rx_data();    // 重置数据接收
-      
-      set_wincc_format(addr, PIC_FORMAT_RGB565, width, height);
+    receiving_process();    // 处理一下前面接收到的数据
+    do{
+      set_wincc_format(addr, PIC_FORMAT_RGB565, width, height);     // 发送设置图像格式指令
       flag++;
-    }
-    while(no_ack_with_data_attached(0x1FFFFFF) != 0 && flag < 10);
+      if (flag > 5)
+        LED1_ON;
+    }while(receiving_process() != 0);    // 判断是否收到应答
     
-    if (flag >= 10)
-    {
-      LED1_ON;
-    }
-    
-    flag = !flag;
+    flag = 0;
+    LED1_OFF;
   }
-  
-  
+
   if (Ov7725_vsync == 2)    // 采集完成
   {
     FIFO_PREPARE;  			/*FIFO准备*/
-  
-    uint8_t packet_head[10] = {0x59, 0x48, 0x5A, 0x53,     // 包头
-                               0x00,                       // 设备地址
-                               0x00, 0x02, 0x58, 0x0C,     // 包长度 (10+320*240*2+2)
-                               0x02                        // 图像数据命令
-                               };
     
-    packet_head[4] = addr;    // 修改设备地址
-    
-    uint32_t data_len = 10 + width * height * 2 + 2;    // 计算包长度
-                               
+    packet_head.addr = addr;    // 修改设备地址
+                      
     /* 修改包长度 */
-    packet_head[5] = data_len >> 24;
-    packet_head[6] = data_len >> 16;
-    packet_head[7] = data_len >> 8;
-    packet_head[8] = data_len;
-    
-    memset(Camera_Data, 0xDD, sizeof(Camera_Data));
+    packet_head.len = 10 + width * height * 2 + 2;    // 计算包长度
 
     /* 发送头 */
     CAM_ASS_SEND_DATA((uint8_t *)&packet_head, sizeof(packet_head));
@@ -209,12 +250,12 @@ int write_rgb_wincc(uint8_t addr, uint16_t width, uint16_t height)
       }
 
       CAM_ASS_SEND_DATA((uint8_t *)Camera_Data, j*2);           		// 分段发送像素数据
-      crc_16 = calc_crc_16((uint8_t *)Camera_Data, j*2, crc_16);    // 分段计算crc—16的校验码，计算一行图像数据
+//      crc_16 = calc_crc_16((uint8_t *)Camera_Data, j*2, crc_16);    // 分段计算crc—16的校验码，计算一行图像数据
     }
 
     /*发送校验数据*/
     crc_16 = ((crc_16&0x00FF)<<8)|((crc_16&0xFF00)>>8);    //  交换高字节和低字节位置
-    CAM_ASS_SEND_DATA((uint8_t *)&crc_16, 2);
+    CAM_ASS_SEND_DATA((uint8_t *)&crc_16, 2);              // 上位机不勾选CRC-16也需要发送这两个字节
     
     Ov7725_vsync = 0;		 // 开始下次采集
   }
@@ -222,97 +263,3 @@ int write_rgb_wincc(uint8_t addr, uint16_t width, uint16_t height)
   return 0;    // 返回成功
 }
 
-#if 1   // 把rgb数据写到文件，方便写上位机大佬测试
-/**
- * @brief  将图像数据包写到文件.
- * @param  addr:   设备地址，0 or 1.
- * @param  width:  图像宽度.
- * @param  height: 图像高度.
- * @return 0：成功，-1：失败.
- */
-
-#include "ff.h"
-
-FIL bmpfsrc; 
-FRESULT bmpres;
-
-int write_rgb_file(uint8_t addr, uint16_t width, uint16_t height, char *file_name) 
-{
-  uint16_t i, j; 
-  uint16_t crc_16 = 0xFFFF;
-	uint16_t Camera_Data[640];
-  unsigned int mybw;
-
-//  packet_head_t packet_head =
-//  {
-//    .head = 0x59485A53,     // 包头
-//    .addr = 0x00,           // 设备地址
-//    .len  = 0x00000011,     // 包长度 (10+320*240*2+2)
-//    .cmd  = 02,             // 图像数据命令
-//  };
-  
-  if (Ov7725_vsync == 2)    // 采集完成
-  {
-    FIFO_PREPARE;  			/*FIFO准备*/
-  
-    uint8_t packet_head[10] = {0x59, 0x48, 0x5A, 0x53,     // 包头
-                               0x01,                       // 设备地址
-                               0x00, 0x02, 0x58, 0x0C,     // 包长度 (10+320*240*2+2)
-                               0x02                        // 图像数据命令
-                               };
-    
-    packet_head[4] = addr;
-    
-    uint32_t data_len = 10 + width * height * 2 + 2;
-                               
-    packet_head[5] = data_len >> 24;
-    packet_head[6] = data_len >> 16;
-    packet_head[7] = data_len >> 8;
-    packet_head[8] = data_len;
-    
-    memset(Camera_Data, 0xDD, sizeof(Camera_Data));
-                               
-    /* 新建一个文件 */
-    bmpres = f_open( &bmpfsrc , (char*)file_name, FA_CREATE_ALWAYS | FA_WRITE );
-    
-    /* 新建文件之后要先关闭再打开才能写入 */
-    f_close(&bmpfsrc);
-      
-    bmpres = f_open( &bmpfsrc , (char*)file_name,  FA_OPEN_EXISTING | FA_WRITE);
-
-    if ( bmpres == FR_OK )    // 文件打开成功
-    {
-      /* 发送头 */
-      f_write(&bmpfsrc, (uint8_t *)&packet_head, sizeof(packet_head), &mybw);        // 发送包头
-      crc_16 = calc_crc_16((uint8_t *)&packet_head, sizeof(packet_head), crc_16);    // 分段计算crc—16的校验码, 计算包头的
-
-      /* 发送图像数据 */
-      for(i = 0; i < width; i++)
-      {
-        for(j = 0; j < height; j++)
-        {
-          READ_FIFO_PIXEL(Camera_Data[j]);		// 从FIFO读出一个rgb565像素到Camera_Data变量
-        }
-
-        f_write(&bmpfsrc, Camera_Data, j*2, &mybw);        // 发送图像数据
-        crc_16 = calc_crc_16((uint8_t *)Camera_Data, j*2, crc_16);    // 分段计算crc—16的校验码，计算一行图像数据
-      }
-
-      /*发送校验数据*/
-      crc_16 = ((crc_16&0x00FF)<<8)|((crc_16&0xFF00)>>8);    //  交换高字节和低字节位置
-      f_write(&bmpfsrc, (uint8_t *)&crc_16, 2, &mybw);       // 发送crc校验数据
-      
-      Ov7725_vsync = 0;		 // 开始下次采集
-      
-      f_close(&bmpfsrc);       // 关闭文件
-    }
-    else
-    {
-      f_close(&bmpfsrc);     // 关闭文件
-      return -1;    // 返回失败
-    }
-  }
-
-  return 0;    // 返回成功
-}
-#endif
