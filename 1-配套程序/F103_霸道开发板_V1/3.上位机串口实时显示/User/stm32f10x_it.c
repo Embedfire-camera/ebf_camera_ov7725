@@ -25,9 +25,11 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
-
+#include "./usart/bsp_usart.h"
+#include "./protocol/protocol.h"
 #include "./ov7725/bsp_ov7725.h"
 #include "./systick/bsp_SysTick.h" 
+#include "./led/bsp_led.h" 
 
 extern uint8_t Ov7725_vsync;
 
@@ -196,6 +198,21 @@ void OV7725_VSYNC_EXTI_INT_FUNCTION ( void )
 /*void PPP_IRQHandler(void)
 {
 }*/
+
+/**
+  * @brief  串口中断处理服务函数
+  * @param  无
+  * @retval 无
+  */
+void DEBUG_USART_IRQHandler(void)
+{
+	if(USART_GetITStatus(DEBUG_USARTx,USART_IT_RXNE)!=RESET)
+	{
+    uint8_t data = USART_ReceiveData(DEBUG_USARTx);
+    protocol_data_recv(&data, 1);
+    LED1_TOGGLE;
+	}
+}
 
 /**
   * @}
